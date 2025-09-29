@@ -60,7 +60,13 @@
     OrderWithStatus? orderWithStatus;
     bool invalidOrder = false;
 
-    protected override async Task OnParametersSetAsync()
+    protected override async Task OnParametersSetAsync() =>
+        await GetLatestOrderStatusUpdatesAsync();
+
+    protected override Task OnAfterRenderAsync(bool firstRender) =>
+    firstRender ? StartPollingTimerAsync() : Task.CompletedTask;
+
+    async Task GetLatestOrderStatusUpdatesAsync()
     {
         try
         {
@@ -73,4 +79,15 @@
             Console.Error.WriteLine(ex);
         }
     }
+
+    async Task StartPollingTimerAsync()
+    {
+        while (IsOrderIncomplete && await timer.WaitForNextTickAsync())
+        {
+            await GetLatestOrderStatusUpdatesAsync();
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose() => timer.Dispose();
 }
